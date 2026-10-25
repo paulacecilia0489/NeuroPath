@@ -43,9 +43,9 @@ Each arrow is one function in `dsp.js`. `app.js` just calls them in this order a
 **`decimate`**: for drawing. 12,000 samples cannot fit in 600 pixels, so for each pixel column it keeps the min and max. That way narrow peaks never disappear.
 
 ## Presets and presets' design (dsp.js `PRESETS`)
-Each preset is a recipe for `simulateEMG`: which contractions happen when, how noisy, and whether cable bumps occur. They are tuned so the default pipeline solves them, because a judge should see success in one click. Two things they teach: on the **resting muscle** the right answer is *zero* detections (scoring treats "nothing found" as perfect), and making the threshold too sensitive makes the detector fire on noise.
+Each preset is a recipe for `simulateEMG`: which contractions happen when, how noisy, and whether cable bumps occur. They are tuned so the default pipeline solves them. Two things they teach: on the **resting muscle** the right answer is *zero* detections (scoring treats "nothing found" as perfect), and making the threshold too sensitive makes the detector fire on noise.
 
-## Honest limits of the detector (be able to say these)
+## Honest limitations of the detector
 - The resting level is estimated from the quieter half of the recording, so it assumes the muscle is at rest a good part of the time.
 - Cable bumps survive heavy smoothing: a 50 ms bump smoothed at 5 Hz becomes a blip of about 120-145 ms, longer than the 100 ms "ignore short blips" setting. Lighter smoothing (10 Hz) shortens the blip so the rule removes it. This is why the Medium and Hard challenges need about 10 Hz.
 - A single threshold gives open/closed only. Real devices use proportional control or pattern recognition.
@@ -79,29 +79,12 @@ Numbered sections at the top of the file. The important ideas:
 - **`rrect`**: a hand-drawn rounded rectangle, because `ctx.roundRect` does not exist in older browsers (it crashed the gripper step there).
 - **No network calls**: uploaded files are read with `file.text()` in the browser.
 
-## Testing and validation (say this in your video)
+## Testing and validation 
 - `tests/unit.test.js`: 50 checks. Known-answer tests (sine waves, FFT peak), edge cases (zeros, flat line, DC offset, NaN, empty input, extreme sample rates), CSV safety, scoring, matching, and outreach rules.
 - `tests/validate_scipy.py`: runs the same signal through `dsp.js` and SciPy/NumPy. Differences: band-pass 0.002 %, notch 0.11 %, envelope 0.09 %, spectrum 0.03 dB.
 - `tests/browser_test.py` and `tests/browser_features_test.py`: drive the real app in Chromium (clicks, uploads, downloads, deep links, a browser without `roundRect`, a phone-sized screen).
-- Several real bugs were found by these tests (DC-offset false detections, silent CSV misreads, a crash in older browsers), which is the best argument that they are worth having.
+- Several bugs were found by these tests (DC-offset false detections, silent CSV misreads, a crash in older browsers)
 
 ## Rendering and speed
 `dsp.js` contains no drawing code on purpose, so it can be tested without a browser. Drawing lives in `app.js`: canvas plots use min/max decimation, slider events are coalesced with `requestAnimationFrame` (`scheduleRefresh`), and the gripper animation runs on its own `requestAnimationFrame` loop. Measured: about 10 ms per recompute + redraw and about 60 fps during playback in headless Chromium.
 
-## Questions a judge might ask (and where the answer is)
-1. *Why filter forward and backward?* Zero phase shift: no delay. See `filtfilt`.
-2. *How do you choose the threshold without labels?* Rest level from the quieter half of the envelope plus k times its spread. See `restStats`.
-3. *Why is the data simulated?* No access to lab equipment; it lets everyone practice, and the true answers allow scoring. Your own CSV works too.
-4. *What is the limit?* A single threshold gives only open/closed. Real devices use proportional control or pattern recognition.
-5. *Why did you not use accounts or a database?* Privacy for minors and zero server risk. Roadmap covers a two-sided platform.
-6. *How do you stop email spam to professors?* Students must write their own question, and the roadmap adds per-lab monthly caps and opt-in-only listing.
-7. *How do you know your filters are right?* Cross-checked against SciPy on the same signal (differences under 0.2 %), plus known-answer tests.
-8. *Why does the resting preset exist?* To show that "detect nothing" can be the correct answer, and that an over-sensitive threshold fires on noise.
-9. *What would you do with more time?* Real EMG recordings from your own sensor, an EEG alpha-wave lesson, pilot with a class, recruit labs.
-
-## Exercises (do 2 or 3 before submitting; they make the project yours)
-1. In `dsp.js`, change `plan` inside `simulateEMG` to add a sixth contraction. Run `node tests/unit.test.js`: which test fails and why? Fix the test.
-2. Change the default `k` in `DEFAULTS` (`app.js`) and see how the Medium challenge changes.
-3. Add a "Very hard" difficulty in `DIFFICULTY` and a button for it in `index.html`.
-4. Add a rolling RMS envelope as an alternative to rectify + low-pass, and compare the two on the plot.
-5. Record a few seconds from your own EMG sensor, save it as CSV, upload it, and describe in your write-up what you had to change to get clean detections.
