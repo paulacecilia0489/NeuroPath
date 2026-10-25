@@ -1,6 +1,6 @@
 # NeuroPath
 
-Clean a noisy muscle (EMG) signal in five steps, find every real contraction, and drive a virtual gripper. Then match with research labs that welcome students. Runs entirely in the browser: no install, no account, no server, no data collected.
+Built by Paula Cecilia Pabon Ruiz
 
 ## Testing and validation
 Four layers, all runnable on your own computer. Numbers below are from the packaged version.
