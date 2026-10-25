@@ -2,33 +2,6 @@
 
 Clean a noisy muscle (EMG) signal in five steps, find every real contraction, and drive a virtual gripper. Then match with research labs that welcome students. Runs entirely in the browser: no install, no account, no server, no data collected.
 
-## What you need to download
-
-| Need | Why | Required? |
-|---|---|---|
-| A code editor, e.g. **VS Code** (code.visualstudio.com) | To read and edit the files | Yes |
-| **Chrome, Edge, Firefox or Safari** | To run the app | Yes (you have one) |
-| A free **GitHub** account | To host it with a public link for judges | Yes, for submission |
-| **Node.js** (nodejs.org, LTS) | Only to run `tests/unit.test.js` | Optional |
-| **Python 3 + Playwright** | Only to run the browser test | Optional |
-
-No frameworks, no `pip install`, no `npm install`. It is plain HTML, CSS and JavaScript.
-
-## Run it (30 seconds)
-1. Unzip the folder.
-2. Double-click `index.html`. It opens in your browser.
-
-That is the whole app. (If a browser blocks something on `file://`, run `python3 -m http.server 8000` inside the folder and open http://localhost:8000.)
-
-## Put it online (free, gives judges a link)
-**GitHub Pages**
-1. Create a new public repository on github.com (e.g. `neuropath`).
-2. Click *Add file > Upload files* and drag in everything inside the folder (`index.html`, `app.js`, `dsp.js`, `labs.js`, `labs-data.js`, `style.css`, `README.md`, `CODE_GUIDE.md`, and the `tests` folder). Commit.
-3. *Settings > Pages > Build and deployment*: Source = **Deploy from a branch**, Branch = **main**, folder = **/(root)**. Save.
-4. After about a minute your app is at `https://YOUR-USERNAME.github.io/neuropath/`. Open it on your phone to check.
-
-The same repository is also your **source code** link for the challenge.
-
 ## Testing and validation
 Four layers, all runnable on your own computer. Numbers below are from the packaged version.
 
@@ -70,23 +43,9 @@ python3 tests/browser_features_test.py  # presets, badges, sound, lab bridge, ch
 - **Sending guide:** best days, hours and months (with a note for today's date), how to avoid the spam folder, and how to follow up on the same thread. These are common rules of thumb, and the page says so.
 - **Routing:** `#lab`, `#find`, `#about` (plus aliases such as `#matcher`); any unknown hash falls back to the Signal Lab.
 
-## Things to do before you submit
-1. **Read `CODE_GUIDE.md` and make sure you can explain each part.** The contest allows AI-assisted code only if you understand it, and judges may ask.
-2. **Read the official 2026 rulebook** for the AI-use policy, required video and written-answer formats, and the exact deadline (reported as Oct 26, 2026, 12:00 p.m. ET). Check your district is participating.
-3. **Make it yours.** Rewrite the About text and the five quiz questions in your own words, and tune one thing yourself (e.g. add a lesson about EEG alpha waves).
-4. **Test with your own sensor data if you have it.** A short CSV recorded from your own EMG project makes a far stronger demo than simulated data. Say clearly in your video which is which.
-5. **Set the lab opt-in.** In `labs-data.js`, set `optInFormUrl` (e.g. a Google Form) or `optInEmail` when you are ready. Leave both empty until then.
-6. **Do not add a real lab until it agrees.** The directory is demo-only on purpose, and the app says so. Never present demo entries or simulated signals as real data.
-7. **Submit a day early.**
 
-## Your own CSV: what is accepted
-- One column of values, or `time,value` (seconds or milliseconds). Extra columns are ignored (column 2 is used).
-- Header rows are skipped. Commas, semicolons or tabs can separate columns.
-- **Refused with a clear message instead of guessed:** files with decimal commas (`0,5`), two columns where the first is not time, flat files, and files under 200 samples.
-- Files over 200,000 samples are trimmed to the first 200,000.
 
-## Known limits (be upfront about these)
+## Limitations
 - The simulated muscle is a model, not a recording. It includes realistic problems but is simpler than real EMG.
 - The lab directory has no real labs yet, so "Find a lab" is a working prototype of the matching and email flow, not a live service.
-- Impact is not yet measured. The roadmap (lab caps, anonymous outcomes, teacher cohorts) needs real partners and a school pilot first.
 - The gripper uses one on/off threshold. Real prosthetics add graded force and pattern recognition.
