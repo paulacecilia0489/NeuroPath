@@ -1,6 +1,5 @@
-# Code guide: understand every part
+# Code guide: understanding every part
 
-Goal: after reading this you can explain what each file does, why, and answer a judge's "how does that work?" Read it with the code open next to it. Where something is unclear, change a number, reload, and see what happens. That is the fastest way to learn it.
 
 ## The big picture
 ```
