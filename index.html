@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeuroPath</title>
+<meta name="description" content="Clean a noisy muscle signal and drive a virtual gripper in your browser, then find research labs that welcome students.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="currentColor"/>
+        <path d="M3 17h5l3-9 5 17 4-12 2 4h7" fill="none" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="name">NeuroPath</span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-lab" aria-controls="view-lab" aria-selected="true">Signal Lab</button>
+      <button role="tab" id="tab-find" aria-controls="view-find" aria-selected="false" tabindex="-1">Find a lab</button>
+      <button role="tab" id="tab-about" aria-controls="view-about" aria-selected="false" tabindex="-1">About</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ====================================================== SIGNAL LAB -->
+<section id="view-lab" role="tabpanel" aria-labelledby="tab-lab">
+  <div class="wrap hero">
+    <p class="eyebrow">Neuroengineering, hands-on</p>
+    <h1>Make a virtual gripper obey a muscle.</h1>
+    <p class="lede">Many prosthetic hands read the electrical activity of your muscles (EMG). Clean up a noisy signal in five steps, find every real contraction, then watch a gripper respond. No install, no account, and nothing leaves your device.</p>
+  </div>
+
+  <div class="wrap">
+    <div class="card source" role="group" aria-labelledby="src-h">
+      <div class="source-row">
+        <div>
+          <h2 id="src-h" class="h-small">Signal source</h2>
+          <p id="srcInfo" class="muted" aria-live="polite"></p>
+        </div>
+        <div class="source-ctl">
+          <div class="seg" role="group" aria-label="Simulated signal difficulty">
+            <button type="button" class="seg-b" data-diff="easy">Easy</button>
+            <button type="button" class="seg-b" data-diff="medium" aria-pressed="true">Medium</button>
+            <button type="button" class="seg-b" data-diff="hard">Hard</button>
+          </div>
+          <label class="file-b">
+            <input id="file" type="file" accept=".csv,.txt,text/csv,text/plain">
+            <span>Upload my own CSV</span>
+          </label>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="One-click example signals">
+        <span class="muted">One-click examples:</span>
+        <button type="button" class="chip" data-preset="rest" aria-pressed="false">Resting muscle</button>
+        <button type="button" class="chip" data-preset="moderate" aria-pressed="false">Moderate contraction</button>
+        <button type="button" class="chip" data-preset="maxflex" aria-pressed="false">Max flex + artifact noise</button>
+      </div>
+      <div id="fsRow" class="fs-row" hidden>
+        <label for="fsInput">Sample rate of your file (Hz)</label>
+        <input id="fsInput" type="number" min="100" max="20000" step="1" value="1000">
+        <button type="button" id="fsApply" class="btn small">Apply</button>
+        <span class="muted">EMG is usually recorded at 1000 Hz or more.</span>
+      </div>
+      <p id="srcError" class="error" role="alert" hidden></p>
+    </div>
+
+    <ol id="steps" class="steps" aria-label="Pipeline steps"></ol>
+
+    <div class="status-row">
+      <div id="status" class="status" role="status" aria-live="polite" aria-label="Live status">
+        <span id="stQuality" class="badge-s"></span>
+        <span id="stDetect" class="badge-s"></span>
+        <span id="stGrip" class="badge-s"></span>
+      </div>
+      <button type="button" id="soundBtn" class="chip" aria-pressed="false">Sound: off</button>
+    </div>
+
+    <div class="lab-grid">
+      <div class="plots card">
+        <div class="plot" id="wrapA"><canvas id="plotA" role="img" aria-label="Signal plot"></canvas></div>
+        <div class="plot" id="wrapB" hidden><canvas id="plotB" role="img" aria-label="Second signal plot"></canvas></div>
+        <div class="plot" id="wrapS" hidden><canvas id="plotS" role="img" aria-label="Frequency spectrum"></canvas></div>
+        <div class="plot" id="wrapG" hidden>
+          <canvas id="gripper" role="img" aria-label="Virtual gripper"></canvas>
+        </div>
+      </div>
+
+      <aside class="panel card" aria-live="off">
+        <p class="eyebrow" id="stepKicker"></p>
+        <h2 id="stepTitle" class="h-step"></h2>
+        <p id="stepText"></p>
+        <p id="stepTry" class="try"></p>
+
+        <div class="controls" data-step="1" hidden>
+          <label for="hp">High-pass cutoff <output id="hpOut"></output></label>
+          <input id="hp" type="range" min="1" max="60" step="1" value="20">
+          <label for="lp">Low-pass cutoff <output id="lpOut"></output></label>
+          <input id="lp" type="range" min="100" max="450" step="10" value="450">
+          <div class="row">
+            <label class="check"><input id="notch" type="checkbox" checked> Notch filter</label>
+            <label for="notchHz" class="sr">Mains frequency</label>
+            <select id="notchHz"><option value="60" selected>60 Hz (Americas)</option><option value="50">50 Hz (Europe, Asia)</option></select>
+          </div>
+        </div>
+        <div class="controls" data-step="2" hidden>
+          <label for="envHz">Smoothing cutoff <output id="envHzOut"></output></label>
+          <input id="envHz" type="range" min="1" max="40" step="1" value="5">
+        </div>
+        <div class="controls" data-step="3" hidden>
+          <label for="k">Threshold height <output id="kOut"></output></label>
+          <input id="k" type="range" min="1" max="15" step="0.5" value="6">
+          <label for="minMs">Ignore blips shorter than <output id="minMsOut"></output></label>
+          <input id="minMs" type="range" min="0" max="300" step="10" value="100">
+        </div>
+        <div class="controls" data-step="4" hidden>
+          <div class="row">
+            <button type="button" id="play" class="btn">Play</button>
+            <label for="speed" class="sr">Speed</label>
+            <select id="speed"><option value="1">1&times; speed</option><option value="2">2&times; speed</option><option value="0.5">0.5&times; speed</option></select>
+          </div>
+        </div>
+
+        <div id="results" class="results" aria-live="polite"></div>
+        <div id="bridge" class="bridge" hidden></div>
+
+        <fieldset class="quiz" id="quiz">
+          <legend>Check yourself</legend>
+          <p id="quizQ"></p>
+          <div id="quizOpts" class="opts"></div>
+          <p id="quizFb" class="fb" aria-live="polite"></p>
+        </fieldset>
+
+        <div class="nav-row">
+          <button type="button" id="prev" class="btn ghost">&larr; Back</button>
+          <button type="button" id="next" class="btn">Next &rarr;</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="card progress-card">
+      <div>
+        <p class="eyebrow">Your progress</p>
+        <p id="progressText" class="progress-text"></p>
+      </div>
+      <button type="button" id="download" class="btn ghost">Download my results (.md)</button>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== FIND A LAB -->
+<section id="view-find" role="tabpanel" aria-labelledby="tab-find" hidden>
+  <div class="wrap hero">
+    <p class="eyebrow">Next step</p>
+    <h1>Find labs that fit what you can already do.</h1>
+    <p class="lede">Match your interests and skills to research labs, then write a short, specific email in your own words. Only labs that opted in can be contacted through NeuroPath.</p>
+  </div>
+  <div class="wrap two-col">
+    <form id="findForm" class="card form" novalidate>
+      <h2 class="h-small">Your profile</h2>
+      <p class="muted">Stays in this browser tab. Nothing is sent anywhere.</p>
+      <label for="fName">First name</label>
+      <input id="fName" type="text" autocomplete="given-name">
+      <label for="fGrade">Grade</label>
+      <select id="fGrade"><option>freshman</option><option>sophomore</option><option selected>junior</option><option>senior</option></select>
+      <label for="fSchool">School (optional)</label>
+      <input id="fSchool" type="text">
+      <label for="fInterests">Research interests (comma-separated)</label>
+      <textarea id="fInterests" rows="2" placeholder="brain-computer interface, EEG, prosthetics"></textarea>
+      <label for="fSkills">Skills and methods (comma-separated)</label>
+      <textarea id="fSkills" rows="2" placeholder="python, signal processing, EMG"></textarea>
+      <label for="fMode">Format</label>
+      <select id="fMode"><option value="any">Any</option><option value="in-person">In-person</option><option value="remote">Remote</option></select>
+      <label for="fProject">Link to something you built (optional)</label>
+      <input id="fProject" type="url" placeholder="https://github.com/you/project">
+      <button type="submit" class="btn">Find labs</button>
+      <p id="findError" class="error" role="alert" hidden></p>
+    </form>
+
+    <div>
+      <div class="card why" id="whyCard">
+        <h2 class="h-small">Why you write your own question</h2>
+        <ul>
+          <li>Professors receive many generic emails. A specific question about their paper is what gets answered.</li>
+          <li>NeuroPath only supplies the structure. The question must be yours (12+ words), and it is checked for ties to the lab's actual work.</li>
+          <li>Before you can copy, download or send a draft, you confirm four best-practice checks. Contact each lab once, and wait 5&ndash;7 business days before a single follow-up.</li>
+        </ul>
+        <p class="muted">These are coaching prompts, not enforced limits. Per-lab monthly caps are part of the planned opt-in version.</p>
+      </div>
+      <div class="card guide" id="sendGuide">
+        <h2 class="h-small">Sending guide: timing and staying out of spam</h2>
+        <p class="muted">Rules of thumb that many mentors and career offices share. They are not guarantees, and professors differ.</p>
+        <div class="callout"><strong>Tip: use Schedule send.</strong> You will probably finish writing at night, but a message that arrives at 11 PM looks automated and sinks under morning mail. Write whenever you like, then schedule it for <strong>Tuesday&ndash;Thursday, 8&ndash;10 AM in the professor's time zone</strong>. Gmail (arrow next to Send), Outlook and Apple Mail all have it.</div>
+        <h3>When to send</h3>
+        <ul>
+          <li><strong>Best days:</strong> Tuesday, Wednesday, Thursday. Mondays are buried in weekend mail, and Friday or weekend emails often sit unread.</li>
+          <li><strong>Best hours:</strong> 8&ndash;10 AM their time, before lectures and meetings. Avoid evenings and the middle of the night.</li>
+          <li><strong>Best months:</strong> January&ndash;February for summer, April&ndash;May for fall, October&ndash;early November for spring. Avoid finals weeks and the first two weeks of a term.</li>
+        </ul>
+        <p class="timing" id="timingNow"></p>
+        <h3>Avoiding the spam folder</h3>
+        <ul>
+          <li>Plain text. No all-caps subject, no stacked exclamation marks, no sales words (&ldquo;guarantee&rdquo;, &ldquo;click here&rdquo;, &ldquo;act now&rdquo;).</li>
+          <li>Send from your real full name. Keep any attachment (CV, paper) a compact PDF, ideally under 2&ndash;3 MB, or just link it.</li>
+          <li>A few tailored emails per day, spread over the week. Never send the same message to several people in one department.</li>
+          <li>NeuroPath sends nothing itself. Your own email app sends it, so your normal account settings apply.</li>
+        </ul>
+        <h3>Following up</h3>
+        <ul>
+          <li>Wait <strong>5&ndash;7 business days</strong>, then send one short, polite reply <strong>on the same thread</strong>. Do not start a new email. After one follow-up, move on.</li>
+        </ul>
+      </div>
+      <div id="labResults" aria-live="polite"></div>
+
+      <div class="card">
+        <h2 class="h-small">No lab yet? Start here.</h2>
+        <p class="muted">You do not need permission to do real research. Run your pipeline on real recordings, then upload your own CSV in the Signal Lab.</p>
+        <ul id="resources" class="res"></ul>
+      </div>
+      <div class="card" id="optInBox">
+        <h2 class="h-small">Are you a lab member?</h2>
+        <p id="optInText"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== ABOUT -->
+<section id="view-about" role="tabpanel" aria-labelledby="tab-about" hidden>
+  <div class="wrap hero">
+    <p class="eyebrow">About</p>
+    <h1>Real neuroengineering shouldn't need a lab key.</h1>
+  </div>
+  <div class="wrap prose">
+    <div class="card">
+      <h2 class="h-small">The problem</h2>
+      <p>Most high school students never touch real biosignals. Equipment is expensive, labs rarely say whether they welcome students, and nobody explains what a first project looks like. Students without mentors fall furthest behind.</p>
+      <h2 class="h-small">What NeuroPath does</h2>
+      <ul>
+        <li><strong>Signal Lab:</strong> a hands-on EMG pipeline (band-pass, notch, rectify, envelope, threshold) with a scored challenge and a virtual gripper. Use simulated signals or upload a recording from your own sensor.</li>
+        <li><strong>Find a lab:</strong> matches your interests and skills to labs, then helps you write a specific email. You must write your own question, so the tool cannot be used to mass-send templates.</li>
+        <li><strong>No-lab path:</strong> pointers to open datasets so you can keep going on your own.</li>
+      </ul>
+      <h2 class="h-small">Privacy</h2>
+      <p>NeuroPath has no accounts and no server. Uploaded files are processed in your browser and never uploaded. The only thing saved, on your own device, is which checks you completed.</p>
+      <h2 class="h-small">What is real and what is a demo</h2>
+      <ul>
+        <li>The signal-processing code is real and the same math used in research tools. The simulated muscle is <em>simulated</em>, built to include realistic problems (60 Hz hum, drift, cable bumps).</li>
+        <li>The lab directory currently contains <strong>demo entries only</strong>. They are clearly marked and cannot generate emails. Real labs are added only after they agree to be listed.</li>
+      </ul>
+      <h2 class="h-small">What comes next</h2>
+      <p>A two-sided version where labs set a monthly cap on student inquiries, outcomes are tracked anonymously, and teachers can run a class cohort. It needs real lab partners and a school pilot first.</p>
+      <h2 class="h-small">Limits</h2>
+      <p>This is an educational tool. The gripper is a visualization, not a medical device. A simple threshold gives only open and closed, while real prosthetic control often needs graded force and pattern recognition.</p>
+      <p class="muted">Created by a high school student interested in neuroengineering. Code written with AI assistance and reviewed by the author.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot"><div class="wrap">NeuroPath &middot; educational project &middot; no data collected</div></footer>
+
+<script src="dsp.js"></script>
+<script src="labs.js"></script>
+<script src="labs-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
